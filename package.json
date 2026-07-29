@@ -1,0 +1,56 @@
+{
+	"name": "n8n-nodes-buzz",
+	"version": "0.1.0",
+	"description": "An n8n community node for sending messages to Buzz channels",
+	"license": "MIT",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"buzz",
+		"nostr",
+		"notifications"
+	],
+	"author": {
+		"name": "n8n-nodes-buzz contributors",
+		"email": "noreply@users.noreply.github.com"
+	},
+	"scripts": {
+		"build": "n8n-node build && esbuild nodes/Buzz/GenericFunctions.ts --bundle --platform=node --target=node22 --format=cjs --legal-comments=inline --outfile=dist/nodes/Buzz/GenericFunctions.js",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "node --import tsx --test test/**/*.test.ts",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": false,
+		"credentials": [
+			"dist/credentials/BuzzApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/Buzz/Buzz.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "*",
+		"esbuild": "^0.25.10",
+		"eslint": "9.39.4",
+		"nostr-tools": "^2.16.2",
+		"prettier": "3.8.3",
+		"release-it": "20.2.0",
+		"tsx": "^4.20.6",
+		"typescript": "5.9.3"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}
