@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-buzz",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "An n8n community node for sending messages to Buzz channels",
 	"license": "MIT",
 	"keywords": [

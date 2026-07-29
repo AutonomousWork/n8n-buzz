@@ -212,7 +212,7 @@ test('Buzz node throws when the relay receipt is malformed', async () => {
 	);
 });
 
-test('Buzz credential test sends an authenticated non-mutating query', async () => {
+test('Buzz credential test sends an authenticated public profile query', async () => {
 	const authTag = ['auth', 'a'.repeat(64), 'kind=9', 'b'.repeat(128)];
 	let request: Record<string, unknown> = {};
 	const credentialTestContext = {
@@ -243,7 +243,7 @@ test('Buzz credential test sends an authenticated non-mutating query', async () 
 	assert.deepEqual(result, { status: 'OK', message: 'Connection successful' });
 	assert.equal(request.method, 'POST');
 	assert.equal(request.url, 'https://buzz.example.test/query');
-	assert.equal(request.body, '[{"limit":1}]');
+	assert.equal(request.body, '[{"kinds":[0],"limit":1}]');
 	assert.equal(request.json, false);
 
 	const headers = request.headers as Record<string, string>;
@@ -272,7 +272,10 @@ test('Buzz credential test sends an authenticated non-mutating query', async () 
 		authEvent.tags.some(
 			(tag: string[]) =>
 				tag[0] === 'payload' &&
-				tag[1] === createHash('sha256').update('[{"limit":1}]').digest('hex'),
+				tag[1] ===
+					createHash('sha256')
+						.update('[{"kinds":[0],"limit":1}]')
+						.digest('hex'),
 		),
 	);
 });

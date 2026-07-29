@@ -54,7 +54,7 @@ export BUZZ_TARBALL="$(npm pack --silent)"
 printf 'Created %s\n' "$BUZZ_TARBALL"
 ```
 
-For version `0.1.0`, the resulting archive is `n8n-nodes-buzz-0.1.0.tgz`. The archive contains the compiled `dist` files and runtime package metadata. It does not contain Buzz credentials or private keys.
+The `printf` line reports the resulting archive name. The archive contains the compiled `dist` files and runtime package metadata. It does not contain saved Buzz credential values or private keys.
 
 ### 2. Identify the n8n container
 
@@ -134,7 +134,7 @@ docker exec "$N8N_CONTAINER" sh -lc '
 docker logs --since 2m "$N8N_CONTAINER"
 ```
 
-The `npm ls` output should contain `n8n-nodes-buzz@0.1.0`, and the startup log should not contain a package-loading error.
+The `npm ls` output should contain `n8n-nodes-buzz@<version>`, and the startup log should not contain a package-loading error.
 
 In the n8n editor:
 
@@ -192,19 +192,135 @@ For queue-mode or multi-container deployments, copy and install the same tarball
 
 This process follows n8n's [manual community-node installation guide](https://docs.n8n.io/integrations/community-nodes/installation-and-management/manual-installation/) and its [official Docker volume layout](https://github.com/n8n-io/n8n/blob/master/docker/images/n8n/README.md).
 
-## Buzz setup
+## How to create a Buzz identity for n8n
 
-The node publishes as a real Buzz/Nostr identity, not as a bot token.
+For notification workflows, use a **dedicated standalone service identity**. It does not need to be a managed Buzz agent. In Buzz, a Nostr keypair is the identity: the public key identifies the sender, and the private key signs its messages.
 
-1. Choose or create the Nostr identity that n8n will use.
-2. Add that identity to the Buzz community.
-3. Add the identity to every target channel.
-4. Store its private key in the **Buzz API** n8n credential as either 64-character hex or `nsec1…`.
-5. If the identity is a delegated Buzz agent, also copy its `BUZZ_AUTH_TAG` JSON value into the optional credential field.
+A separate identity makes notifications recognizable and prevents a leaked n8n credential from also compromising a personal or interactive agent identity.
 
-The credential check signs a non-mutating `POST /query` request, so it verifies the relay URL, private key, and delegated auth tag without posting a message.
+### Choose an identity type
 
-Keep the private key in n8n credentials. Do not place it in workflow fields or environment data returned by a node.
+| Identity                          | When to use it                                                                                                      | NIP-OA Auth Tag                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Dedicated service identity        | Recommended for n8n notifications. Generate a keypair and add its public key to Buzz. No agent process is required. | Leave empty                                          |
+| Existing personal/member identity | Technically works, but gives n8n the ability to sign as that person or member.                                      | Usually empty                                        |
+| Managed Buzz agent                | Use only when messages should intentionally be attributed to an existing agent and you control its private key.     | Required when the agent uses NIP-OA owner delegation |
+
+### Prerequisites
+
+You need:
+
+- access to the running Buzz relay container or a Buzz source checkout
+- the UUID of every destination channel
+- a channel owner or administrator who can add members
+- relay-operator access if the deployment enforces a relay membership roster
+
+### 1. Generate a dedicated keypair
+
+The recommended generator is `buzz-admin`, which is included in the official Buzz relay container. First identify the relay container:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+export BUZZ_RELAY_CONTAINER='replace-with-buzz-relay-container-name'
+```
+
+Generate the identity:
+
+```bash
+docker exec "$BUZZ_RELAY_CONTAINER" buzz-admin generate-key
+```
+
+The command prints two values once:
+
+```text
+Public key:  <64-character-hex-public-key>
+Secret key:  <64-character-hex-private-key>
+```
+
+`buzz-admin` does not store the secret key and cannot recover it later. Save the secret directly in a password manager or the n8n credential, and save the public key for the membership steps below. Do not paste real output into documentation, issues, chat, or workflow fields.
+
+If you have a Buzz source checkout instead of a running container, use:
+
+```bash
+cargo run -p buzz-admin -- generate-key
+```
+
+Any offline, standards-compatible Nostr key generator can create the same type of keypair, but `buzz-admin` avoids format ambiguity. Avoid online key generators for production credentials.
+
+### 2. Add the public key to a closed relay
+
+Skip this step when the relay does not enforce a membership roster. If relay membership is required, a relay operator can add the new identity from inside the relay container:
+
+```bash
+export BUZZ_N8N_PUBKEY='replace-with-64-character-hex-public-key'
+docker exec "$BUZZ_RELAY_CONTAINER" \
+  buzz-admin add-member --pubkey "$BUZZ_N8N_PUBKEY" --role member
+```
+
+This grants relay-level access only; it does not grant access to any channel.
+
+### 3. Add the public key to each channel
+
+Using a Buzz CLI configured with a channel owner or administrator identity, run:
+
+```bash
+buzz channels add-member \
+  --channel 'replace-with-channel-uuid' \
+  --pubkey "$BUZZ_N8N_PUBKEY" \
+  --role member
+```
+
+The signing identity for this command needs the `admin:channels` capability. Repeat it for every channel to which n8n will send. Give the n8n identity the `member` role unless it genuinely needs broader permissions.
+
+### 4. Optionally publish a recognizable profile
+
+Configure the Buzz CLI to use the new service identity, then publish a name and description:
+
+```bash
+buzz users set-profile \
+  --name 'n8n Notifications' \
+  --about 'Automated notifications from n8n'
+```
+
+This step is optional, but it makes the sender easier to recognize in Buzz. Supply the private key through your normal secure secret mechanism; do not add it as a command-line argument or commit it to an environment file.
+
+### 5. Create the n8n credential
+
+In n8n, create a **Buzz API** credential with:
+
+- **Relay URL:** the relay's `https://`, `http://`, `wss://`, or `ws://` URL
+- **Private Key:** the generated secret key as 64-character hex; an `nsec1…` private key is also accepted
+- **NIP-OA Auth Tag:** leave empty for the recommended standalone service identity
+
+Use **Test credential**. The test signs a non-mutating `POST /query` request, so it validates the URL, key, and optional auth tag without posting a message.
+
+### 6. Verify the identity end to end
+
+1. Add a **Buzz** node to a test workflow.
+2. Select the new credential and enter a channel UUID from step 3.
+3. Send a short test message.
+4. Confirm the node returns `accepted: true` with an `event_id` and that the message appears under the expected Buzz identity.
+
+If the credential test succeeds but sending fails with a membership error, the key can authenticate but its public key has not been added to that channel.
+
+### Using an existing managed agent instead
+
+A managed agent is not required for notifications, but it can be reused when attribution to that agent is intentional. Enter the agent's private key in the n8n credential. If the agent was created with NIP-OA owner delegation, also enter its exact `BUZZ_AUTH_TAG` JSON value and confirm that the relay allows NIP-OA authentication. A missing, expired, or relay-disabled owner attestation causes authentication to fail.
+
+Do not move a managed agent's key out of its secure store merely for convenience. When the key is unavailable, create a dedicated service identity instead.
+
+### Rotation and troubleshooting
+
+- **Unable to authenticate:** Confirm that **Private Key** contains the secret key, not the public key; confirm the relay URL; and leave **NIP-OA Auth Tag** empty for a standalone identity.
+- **A managed agent cannot authenticate:** Verify that the private key and owner-attestation tag belong to the same agent and that the relay enables NIP-OA authentication.
+- **Relay access is denied:** On a closed relay, have its operator add the public key to the relay membership roster.
+- **Sending reports a channel membership error:** Have a channel owner or administrator add the public key to that channel.
+- **The sender has no friendly name:** Publish the optional profile from step 4.
+- **The private key was lost or exposed:** Generate a new identity, add its memberships, update and test the n8n credential, then remove the old public key. The original private key cannot be recovered.
+
+Anyone with the private key can sign as this identity. Keep it only in a secret manager and n8n's credential store, and use a different key for each integration or environment.
+
+See the upstream [Buzz repository](https://github.com/block/buzz), [CLI and relay smoke-test guide](https://github.com/block/buzz/blob/main/TESTING.md), and [security model](https://github.com/block/buzz/security) for the current protocol and authentication details.
 
 ## Use
 

@@ -15,7 +15,7 @@ import {
 	parseAuthTag,
 } from './GenericFunctions';
 
-const CREDENTIAL_TEST_BODY = '[{"limit":1}]';
+const CREDENTIAL_TEST_BODY = '[{"kinds":[0],"limit":1}]';
 const SAFE_CREDENTIAL_VALIDATION_MESSAGES = new Set([
 	'Buzz Relay URL must be a valid HTTP or WebSocket URL',
 	'Buzz Private Key must be a 64-character hex key or an nsec key',
