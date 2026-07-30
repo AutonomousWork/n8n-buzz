@@ -1,4 +1,4 @@
-# n8n-nodes-buzz
+# n8n-buzz
 
 [![npm version](https://img.shields.io/npm/v/n8n-nodes-buzz.svg)](https://www.npmjs.com/package/n8n-nodes-buzz)
 [![CI](https://github.com/AutonomousWork/n8n-buzz/actions/workflows/ci.yml/badge.svg)](https://github.com/AutonomousWork/n8n-buzz/actions/workflows/ci.yml)

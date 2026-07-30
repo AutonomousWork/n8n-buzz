@@ -1,4 +1,4 @@
-# Install n8n-nodes-buzz manually
+# Install n8n-buzz manually
 
 The recommended installation is **Settings → Community Nodes → Install** with the package name `n8n-nodes-buzz`. Use this guide for queue-mode deployments, installations without the Community Nodes screen, private package mirrors, or local unreleased builds.
 
