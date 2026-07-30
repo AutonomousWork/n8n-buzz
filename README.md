@@ -64,22 +64,40 @@ Save both values printed by the command:
 - **Public key:** used to grant relay and channel membership
 - **Secret key:** entered only in the n8n credential
 
-The secret key is shown once and cannot be recovered. The complete [Buzz identity guide](docs/identity.md) covers closed relays, managed agents, profiles, key rotation, and NIP-OA authentication.
+The secret key is shown once and cannot be recovered. Save it in a password manager, then securely load it as `BUZZ_N8N_PRIVATE_KEY` for the profile step below. The complete [Buzz identity guide](docs/identity.md) covers closed relays, managed agents, profiles, key rotation, and NIP-OA authentication.
 
 ### 3. Add the identity to the destination channel
 
-Using a Buzz CLI configured with a channel owner or administrator identity:
+Set the public relay URL and generated public key. Securely load an existing channel owner or administrator's private key as `BUZZ_CHANNEL_ADMIN_PRIVATE_KEY`:
 
 ```bash
-buzz channels add-member \
+export BUZZ_RELAY_URL='wss://buzz.example.com'
+export BUZZ_N8N_PUBKEY='replace-with-64-character-public-key'
+
+BUZZ_PRIVATE_KEY="$BUZZ_CHANNEL_ADMIN_PRIVATE_KEY" \
+  buzz channels add-member \
   --channel 'replace-with-channel-uuid' \
-  --pubkey 'replace-with-64-character-public-key' \
+  --pubkey "$BUZZ_N8N_PUBKEY" \
   --role member
 ```
 
-Repeat this for every channel the workflow should be able to message. Closed Buzz relays may also require the public key in the relay membership roster; see the [identity guide](docs/identity.md#2-add-the-public-key-to-a-closed-relay).
+The owner/admin key authorizes the membership change; it is not the new service key. Repeat this for every channel the workflow should be able to message. Closed Buzz relays may also require the public key in the relay membership roster; see the [identity guide](docs/identity.md#2-add-the-public-key-to-a-closed-relay).
 
-### 4. Add the Buzz credential in n8n
+### 4. Give the service identity a friendly name
+
+Buzz shows an unnamed identity as a truncated public key. Publish a profile using the **service identity's** private key:
+
+```bash
+unset BUZZ_AUTH_TAG
+BUZZ_PRIVATE_KEY="$BUZZ_N8N_PRIVATE_KEY" \
+  buzz users set-profile \
+  --name 'n8n Notifications' \
+  --about 'Automated notifications from n8n'
+```
+
+Refresh Buzz after publishing the profile. See the [identity guide](docs/identity.md#4-publish-a-recognizable-profile) for verification, avatars, and troubleshooting.
+
+### 5. Add the Buzz credential in n8n
 
 Create a **Buzz API** credential:
 
@@ -95,10 +113,10 @@ _Configure the relay URL and dedicated service identity in an n8n Buzz API crede
 
 Select **Test credential**. The test makes a signed, read-only profile query and does not post a message.
 
-### 5. Send a message
+### 6. Send a message
 
 1. Add a **Buzz** node to a workflow.
-2. Select the credential from step 4.
+2. Select the credential from step 5.
 3. Enter the destination channel UUID.
 4. Enter a static message or an expression such as `{{ $json.message }}`.
 5. Execute the node.
@@ -130,6 +148,8 @@ _Migrate notification routes one at a time while keeping the rest of the workflo
 - **Unable to authenticate:** Confirm the credential contains the secret/private key, not the public key. Confirm the relay URL and leave the NIP-OA field empty for a standalone identity.
 - **Credential test succeeds but sending fails:** The identity can reach the relay but probably is not a member of the destination channel.
 - **Relay access is denied:** A closed relay operator must add the identity's public key to the relay membership roster.
+- **Sender appears as a public key:** Publish the service identity profile in quick-start step 4, verify it with `buzz users get`, and refresh Buzz.
+- **CLI says no community is configured for this host:** Use the public community/relay URL instead of a raw Docker port or unrecognized hostname.
 - **Managed agent authentication fails:** The private key and `BUZZ_AUTH_TAG` must belong to the same agent, and the relay must allow NIP-OA authentication.
 - **Buzz is missing from the node picker:** Confirm the package appears under **Settings → Community Nodes**, restart n8n, and reload the editor.
 - **Only some executions recognize Buzz:** Install the same package version on the n8n main process and every queue worker.
