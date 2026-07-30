@@ -94,7 +94,7 @@ docker exec "$N8N_CONTAINER" sh -lc '
 docker restart "$N8N_CONTAINER"
 ```
 
-To install a specific version, use `npm install n8n-nodes-buzz@0.1.1` in the same directory.
+To install a specific version, use `npm install n8n-nodes-buzz@0.1.2` in the same directory.
 
 ## Uninstall
 

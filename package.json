@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-buzz",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Send signed messages from self-hosted n8n workflows to Buzz channels",
 	"license": "MIT",
 	"homepage": "https://github.com/AutonomousWork/n8n-buzz#readme",

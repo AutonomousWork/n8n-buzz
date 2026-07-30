@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [0.1.2] - 2026-07-30
+
+### Changed
+
+- Added current credential, send-message, and workflow screenshots to the public package documentation.
+- Clarified dedicated service identity creation, channel authorization, friendly Buzz profiles, and relay URL handling.
+- Aligned repository-facing headings with the `n8n-buzz` project name while retaining `n8n-nodes-buzz` as the npm package name.
+
 ## [0.1.1] - 2026-07-30
 
 ### Added
@@ -16,4 +24,5 @@ All notable changes to this project are documented here.
 
 - Restricted the credential test query to public profile events so authenticated relays do not reject an unbounded query.
 
+[0.1.2]: https://github.com/AutonomousWork/n8n-buzz/releases/tag/v0.1.2
 [0.1.1]: https://github.com/AutonomousWork/n8n-buzz/releases/tag/v0.1.1
