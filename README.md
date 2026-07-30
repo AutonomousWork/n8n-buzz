@@ -11,14 +11,10 @@ Use it for alerts, summaries, job results, and context that people or agents sho
 > [!NOTE]
 > This is an unofficial community integration maintained by [Autonomous Work](https://github.com/AutonomousWork). It currently supports self-hosted n8n and sends messages only.
 
-<!-- Add the launch media when ready, then remove these comment markers.
+<!-- Add the launch video when ready:
 ## Demo
 
 [Watch the demo video](PASTE_GITHUB_VIDEO_URL_HERE)
-
-![Buzz credential configuration](docs/media/buzz-credential.png)
-
-![Buzz node configuration](docs/media/buzz-node.png)
 -->
 
 ## What it does
@@ -93,6 +89,10 @@ Create a **Buzz API** credential:
 | Private Key     | The generated secret key as 64-character hex or `nsec1…`          |
 | NIP-OA Auth Tag | Leave empty for the recommended standalone identity               |
 
+![Buzz API credential fields in n8n](docs/media/buzz-credential.png)
+
+_Configure the relay URL and dedicated service identity in an n8n Buzz API credential._
+
 Select **Test credential**. The test makes a signed, read-only profile query and does not post a message.
 
 ### 5. Send a message
@@ -105,6 +105,10 @@ Select **Test credential**. The test makes a signed, read-only profile query and
 
 A successful execution returns `accepted: true`, an `event_id`, the channel ID, content, sender public key, and event timestamp.
 
+![A successful Buzz message execution in n8n](docs/media/buzz-send-message.png)
+
+_The Buzz node signs and sends the message, then returns the relay receipt in the n8n output panel._
+
 ## Node fields
 
 | Field      | Required | Description                                     |
@@ -116,6 +120,10 @@ A successful execution returns `accepted: true`, an `event_id`, the channel ID, 
 ## Replacing a Telegram notification
 
 Replace the Telegram **Send Message** node with **Buzz**, keep the existing message expression, and replace the Telegram chat ID with the Buzz channel UUID. Upstream workflow steps do not need to change.
+
+![An n8n error-notification workflow using Buzz alongside Telegram nodes](docs/media/buzz-workflow.png)
+
+_Migrate notification routes one at a time while keeping the rest of the workflow unchanged._
 
 ## Troubleshooting
 
