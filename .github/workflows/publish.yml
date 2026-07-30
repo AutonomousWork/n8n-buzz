@@ -1,0 +1,59 @@
+# Publishes version tags from this public repository with npm provenance.
+#
+# First release: create a package-scoped npm token and save it as the
+# NPM_TOKEN GitHub Actions secret. After the package exists, configure npm
+# Trusted Publishing for AutonomousWork/n8n-buzz and publish.yml, then remove
+# the secret. The workflow supports both authentication paths.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    if: github.repository == 'AutonomousWork/n8n-buzz'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          package_version="$(node -p "require('./package.json').version")"
+          if [[ "$tag_version" != "$package_version" ]]; then
+            echo "Tag version $tag_version does not match package version $package_version"
+            exit 1
+          fi
+
+      - name: Run tests
+        run: npm test
+
+      - name: Release with provenance
+        run: |
+          if [[ -n "${NPM_TOKEN:-}" ]]; then
+            npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          fi
+          npm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

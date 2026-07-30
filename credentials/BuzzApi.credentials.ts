@@ -7,7 +7,8 @@ export class BuzzApi implements ICredentialType {
 		light: 'file:../nodes/Buzz/buzz.svg',
 		dark: 'file:../nodes/Buzz/buzz.dark.svg',
 	} as const;
-	documentationUrl = 'https://github.com/block/buzz';
+	documentationUrl =
+		'https://github.com/AutonomousWork/n8n-buzz/blob/main/docs/identity.md';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Relay URL',
